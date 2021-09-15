@@ -8,4 +8,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.CONSTRUCTOR)
 public @interface Inject {
+   String value() default "singleton";
 }
