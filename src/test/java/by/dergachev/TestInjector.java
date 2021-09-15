@@ -1,6 +1,5 @@
 package by.dergachev;
 
-import by.dergachev.annotations.Inject;
 import by.dergachev.dao.MessageDao;
 import by.dergachev.dao.UserDao;
 import by.dergachev.dao.impl.MessageDaoImpl;
@@ -12,15 +11,14 @@ import by.dergachev.service.MailSender;
 import by.dergachev.service.UserService;
 import by.dergachev.service.impl.MailSenderImpl;
 import by.dergachev.service.impl.UserServiceImpl;
-import org.junit.Before;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 public class TestInjector {
 
-
     @Test
-    public void test1(){
+    public void testInjectorCreatesInstance() {
         Injector injector = new InjectorImpl();
         injector.bind(UserService.class, UserServiceImpl.class);
         injector.bind(MailSender.class, MailSenderImpl.class);
@@ -33,4 +31,35 @@ public class TestInjector {
         assertSame(provider.getInstance().getClass(), UserServiceImpl.class);
     }
 
+    @Test
+    public void testInjectorCreatesPrototype() {
+
+        Injector injector = new InjectorImpl();
+
+        injector.bind(UserService.class, UserServiceImpl.class);
+        injector.bind(MailSender.class, MailSenderImpl.class);
+        injector.bind(MessageDao.class, MessageDaoImpl.class);
+        injector.bind(UserDao.class, UserDaoImpl.class);
+
+        Provider<UserService> providerOne = injector.getProvider(UserService.class);
+        Provider<UserService> providerTwo = injector.getProvider(UserService.class);
+
+        assertNotSame(providerOne.getInstance(), providerTwo.getInstance());
+    }
+
+    @Test
+    public void testInjectorCreatesSingleton() {
+
+        Injector injector = new InjectorImpl();
+
+        injector.bindSingleton(UserService.class, UserServiceImpl.class);
+        injector.bind(MailSender.class, MailSenderImpl.class);
+        injector.bind(MessageDao.class, MessageDaoImpl.class);
+        injector.bind(UserDao.class, UserDaoImpl.class);
+
+        Provider<UserService> providerOne = injector.getProvider(UserService.class);
+        Provider<UserService> providerTwo = injector.getProvider(UserService.class);
+
+        assertSame(providerOne.getInstance(), providerTwo.getInstance());
+    }
 }

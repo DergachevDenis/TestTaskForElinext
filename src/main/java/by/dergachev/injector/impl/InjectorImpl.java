@@ -5,57 +5,50 @@ import by.dergachev.exceptions.BeanCreationException;
 import by.dergachev.exceptions.BindingNotFoundException;
 import by.dergachev.exceptions.ConstructorNotFoundException;
 import by.dergachev.exceptions.TooManyConstructorsException;
+import by.dergachev.injector.BindWrapper;
 import by.dergachev.injector.Injector;
 import by.dergachev.provider.Provider;
 import by.dergachev.provider.impl.ProviderImpl;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class InjectorImpl implements Injector {
 
-    private final Map<String, Class<?>> mapBinds = new ConcurrentHashMap<>();
+    private final Map<String, BindWrapper<?>> mapBinds = new ConcurrentHashMap<>();
     private final Map<String, Object> mapInstance = new ConcurrentHashMap<>();
 
     @Override
     public <T> Provider<T> getProvider(Class<T> type) {
 
-        if(!mapBinds.containsKey(type.getSimpleName())){
+        if (!mapBinds.containsKey(type.getSimpleName())) {
             return null;
         }
         T instance;
         try {
-             instance = getBean(type);
+            instance = getBean(type);
         } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
             throw new BeanCreationException("Can not build bean");
         }
-
         return new ProviderImpl<T>(instance);
     }
 
 
     public synchronized <T> T getBean(Class<T> type) throws InvocationTargetException, InstantiationException, IllegalAccessException {
-        Class<? extends T> bean;
-        if (type.isInterface()) {
-            bean = (Class<? extends T>) checkBind(type);
-        } else {
-            bean = type;
+        BindWrapper bindWrapper = getBindWrapper(type);
+
+        if (bindWrapper.isSingleton() && bindWrapper.getIntf()!= null && mapInstance.containsKey(bindWrapper.getIntf().getSimpleName())) {
+                return (T) mapInstance.get(bindWrapper.getIntf().getSimpleName());
         }
 
-        if (mapInstance.containsKey(bean.getSimpleName())) {
-            return (T) mapInstance.get(bean.getSimpleName());
-        }
-
-        Constructor<? extends T>[] constructorsBean = (Constructor<? extends T>[]) bean.getConstructors();
+        Constructor<? extends T>[] constructorsBean = (Constructor<? extends T>[]) bindWrapper.getClazz().getConstructors();
         Constructor<?> constructorBean = checkConstructor(constructorsBean);
 
         if (constructorBean != null && constructorBean.getParameterCount() == 0) {
             Object instance = constructorBean.newInstance();
-            mapInstance.put(type.getSimpleName(), instance );
+            mapInstance.put(type.getSimpleName(), instance);
             return (T) instance;
         } else if (constructorBean != null) {
             Class<?>[] parameterTypes = constructorBean.getParameterTypes();
@@ -99,7 +92,11 @@ public class InjectorImpl implements Injector {
         return constructorBean;
     }
 
-    private <T> Class<?> checkBind(Class<T> type) {
+    private <T> BindWrapper getBindWrapper(Class<T> type) {
+
+        if (!type.isInterface()) {
+            return new BindWrapper(false, type, null);
+        }
         if (!mapBinds.containsKey(type.getSimpleName())) {
             throw new BindingNotFoundException("There is no implementation for this interface - " + type.getSimpleName());
         }
@@ -108,10 +105,13 @@ public class InjectorImpl implements Injector {
 
     @Override
     public <T> void bind(Class<T> intf, Class<? extends T> impl) {
-        mapBinds.put(intf.getSimpleName(), impl);
+        BindWrapper bindWrapper = new BindWrapper(false, impl, intf);
+        mapBinds.put(intf.getSimpleName(), bindWrapper);
     }
 
     @Override
     public <T> void bindSingleton(Class<T> intf, Class<? extends T> impl) {
+        BindWrapper bindWrapper = new BindWrapper(true, impl, intf);
+        mapBinds.put(intf.getSimpleName(), bindWrapper);
     }
 }
