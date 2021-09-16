@@ -7,11 +7,10 @@ import by.dergachev.service.UserService;
 
 public class UserServiceImpl implements UserService {
 
+    public final static String LOGIN_PHRASE = "User logged in";
+
     private MailSender mailSender;
     private UserDao userDao;
-
-    public UserServiceImpl() {
-    }
 
     @Inject
     public UserServiceImpl(MailSender mailSender, UserDao userDao) {
@@ -20,9 +19,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void print() {
-        System.out.println(this.getClass().getSimpleName());
-        System.out.println(this.mailSender.getClass().getSimpleName());
-        System.out.println(this.userDao.getClass().getSimpleName());
+    public String loginAction() {
+        return LOGIN_PHRASE;
     }
 }
