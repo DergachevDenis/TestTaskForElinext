@@ -29,7 +29,8 @@ public class InjectorImpl implements Injector {
         }
         T instance;
         try {
-            instance = getBean(type);
+            List<Class<? extends T>> path = new ArrayList<>();
+            instance = getBean(type, path);
         } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
             throw new BeanCreationException("Can not build bean");
         }
@@ -37,7 +38,12 @@ public class InjectorImpl implements Injector {
     }
 
 
-    public synchronized <T> T getBean(Class<T> type) throws InvocationTargetException, InstantiationException, IllegalAccessException {
+    public synchronized <T> T getBean(Class<T> type, List<Class<? extends T>> path) throws InvocationTargetException, InstantiationException, IllegalAccessException {
+        if(path.contains(type)){
+            throw new BeanCreationException("Cyclical dependence in a graph");
+        }
+        path.add(type);
+
         BindWrapper bindWrapper = getBindWrapper(type);
 
         if (bindWrapper.isSingleton() && bindWrapper.getIntf()!= null && mapInstance.containsKey(bindWrapper.getIntf().getSimpleName())) {
@@ -50,11 +56,12 @@ public class InjectorImpl implements Injector {
         if (constructorBean != null && constructorBean.getParameterCount() == 0) {
             Object instance = constructorBean.newInstance();
             mapInstance.put(type.getSimpleName(), instance);
+            path.remove(path.size()-1);
             return (T) instance;
         } else if (constructorBean != null) {
             Class<?>[] parameterTypes = constructorBean.getParameterTypes();
             for (Class<?> clazz : parameterTypes) {
-                getBean(clazz);
+                getBean((Class<T>) clazz, path);
             }
 
             List<Object> listInstance = new ArrayList<>();
@@ -62,6 +69,7 @@ public class InjectorImpl implements Injector {
 
             Object instance = constructorBean.newInstance(listInstance.toArray());
             mapInstance.put(type.getSimpleName(), instance);
+            path.remove(path.size()-1);
             return (T) instance;
         }
         return null;

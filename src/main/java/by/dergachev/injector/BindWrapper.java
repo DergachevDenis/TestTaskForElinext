@@ -1,6 +1,7 @@
 package by.dergachev.injector;
 
 public class BindWrapper<T> {
+
     private final boolean isSingleton;
     private final Class<T> intf;
     private final Class<? extends T> clazz;
