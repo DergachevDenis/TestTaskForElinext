@@ -15,6 +15,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+@SuppressWarnings("unchecked")
 public class InjectorImpl implements Injector {
 
     private final Map<String, BindWrapper<?>> mapBinds = new ConcurrentHashMap<>();
@@ -44,7 +45,7 @@ public class InjectorImpl implements Injector {
         }
 
         Constructor<? extends T>[] constructorsBean = (Constructor<? extends T>[]) bindWrapper.getClazz().getConstructors();
-        Constructor<?> constructorBean = checkConstructor(constructorsBean);
+        Constructor<?> constructorBean = getConstructor(constructorsBean);
 
         if (constructorBean != null && constructorBean.getParameterCount() == 0) {
             Object instance = constructorBean.newInstance();
@@ -55,10 +56,10 @@ public class InjectorImpl implements Injector {
             for (Class<?> clazz : parameterTypes) {
                 getBean(clazz);
             }
+
             List<Object> listInstance = new ArrayList<>();
-            for (Class<?> clazz : parameterTypes) {
-                listInstance.add(mapInstance.get(clazz.getSimpleName()));
-            }
+            Arrays.stream(parameterTypes).forEach(clazz -> listInstance.add(mapInstance.get(clazz.getSimpleName())));
+
             Object instance = constructorBean.newInstance(listInstance.toArray());
             mapInstance.put(type.getSimpleName(), instance);
             return (T) instance;
@@ -66,7 +67,7 @@ public class InjectorImpl implements Injector {
         return null;
     }
 
-    private Constructor<?> checkConstructor(Constructor<?>[] constructorsBean) {
+    private Constructor<?> getConstructor(Constructor<?>[] constructorsBean) {
         Constructor<?> constructorBeanInject = null;
         Constructor<?> constructorBean = null;
         int count = 0;
@@ -104,13 +105,13 @@ public class InjectorImpl implements Injector {
     }
 
     @Override
-    public <T> void bind(Class<T> intf, Class<? extends T> impl) {
+    public synchronized  <T> void bind(Class<T> intf, Class<? extends T> impl) {
         BindWrapper bindWrapper = new BindWrapper(false, impl, intf);
         mapBinds.put(intf.getSimpleName(), bindWrapper);
     }
 
     @Override
-    public <T> void bindSingleton(Class<T> intf, Class<? extends T> impl) {
+    public synchronized  <T> void bindSingleton(Class<T> intf, Class<? extends T> impl) {
         BindWrapper bindWrapper = new BindWrapper(true, impl, intf);
         mapBinds.put(intf.getSimpleName(), bindWrapper);
     }

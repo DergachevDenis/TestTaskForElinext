@@ -1,9 +1,9 @@
 package by.dergachev.injector;
 
 public class BindWrapper<T> {
-    private boolean isSingleton;
-    private Class<T> intf;
-    private Class<? extends T> clazz;
+    private final boolean isSingleton;
+    private final Class<T> intf;
+    private final Class<? extends T> clazz;
 
     public BindWrapper(boolean isSingleton, Class<? extends T> clazz, Class<T> intf) {
         this.intf = intf;
@@ -15,23 +15,12 @@ public class BindWrapper<T> {
         return isSingleton;
     }
 
-    public void setSingleton(boolean singleton) {
-        isSingleton = singleton;
-    }
-
     public Class<T> getIntf() {
         return intf;
-    }
-
-    public void setIntf(Class<T> intf) {
-        this.intf = intf;
     }
 
     public Class<? extends T> getClazz() {
         return clazz;
     }
 
-    public void setClazz(Class<? extends T> clazz) {
-        this.clazz = clazz;
-    }
 }
