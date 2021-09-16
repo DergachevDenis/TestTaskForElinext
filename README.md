@@ -2,13 +2,13 @@
 
 ### Installation
 
-* Build requires JDK and Maven to be installed
+* Build requires: JDK and Maven should be installed
 * Detailed step-by-step installation instructions for different operating systems can be found
   at https://www.baeldung.com/install-maven-on-windows-linux-mac
 
-### Assembly
+### Build
 
-The assembly takes place using the mvn package command
+The build takes place using the mvn package command
 
 ### Usage
 
@@ -46,11 +46,12 @@ The getProvider () method is used to get the Provider of the required class. The
 ```
 ### Tests
 
-There are 4 tests written for the assembly, covering the following situations:
+There are 3 tests written for the assembly, covering the following situations:
 
-* the first test checks the class, belongs to the desired class and to create an instance.
-* second test third test checks for Prototype creation for class dependencies.
-* the third test checks for the creation of Singletons for class dependencies.
+* the first test checks if the class belongs to the desired class. Also ensures creation of instance.
+* the second test checks if Prototype is created for class dependency.
+* the third test checks if Singleton is created for class dependency.
+* the fourth test checks if instance of Provider invokes method.
 
 
 

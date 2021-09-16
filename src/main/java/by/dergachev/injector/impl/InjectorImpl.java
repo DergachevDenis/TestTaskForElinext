@@ -12,7 +12,10 @@ import by.dergachev.provider.impl.ProviderImpl;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("unchecked")
@@ -34,45 +37,50 @@ public class InjectorImpl implements Injector {
         } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
             throw new BeanCreationException("Can not build bean");
         }
-        return new ProviderImpl<T>(instance);
+
+        return new ProviderImpl<>(instance);
     }
 
 
-    public synchronized <T> T getBean(Class<T> type, List<Class<? extends T>> path) throws InvocationTargetException, InstantiationException, IllegalAccessException {
-        if(path.contains(type)){
+    public synchronized <T> T getBean(Class<T> type, List<Class<? extends T>> path) throws InvocationTargetException, InstantiationException,
+                                                                                                                        IllegalAccessException {
+        if (path.contains(type)) {
             throw new BeanCreationException("Cyclical dependence in a graph");
         }
         path.add(type);
 
-        BindWrapper bindWrapper = getBindWrapper(type);
+        BindWrapper<?> bindWrapper = getBindWrapper(type);
 
-        if (bindWrapper.isSingleton() && bindWrapper.getIntf()!= null && mapInstance.containsKey(bindWrapper.getIntf().getSimpleName())) {
-                return (T) mapInstance.get(bindWrapper.getIntf().getSimpleName());
+        if (bindWrapper.isSingleton() && bindWrapper.getIntf() != null && mapInstance.containsKey(bindWrapper.getIntf().getSimpleName())) {
+            return (T) mapInstance.get(bindWrapper.getIntf().getSimpleName());
         }
 
         Constructor<? extends T>[] constructorsBean = (Constructor<? extends T>[]) bindWrapper.getClazz().getConstructors();
         Constructor<?> constructorBean = getConstructor(constructorsBean);
 
-        if (constructorBean != null && constructorBean.getParameterCount() == 0) {
+        if (constructorBean == null) {
+            return null;
+        }
+
+        if (constructorBean.getParameterCount() == 0) {
             Object instance = constructorBean.newInstance();
             mapInstance.put(type.getSimpleName(), instance);
-            path.remove(path.size()-1);
-            return (T) instance;
-        } else if (constructorBean != null) {
-            Class<?>[] parameterTypes = constructorBean.getParameterTypes();
-            for (Class<?> clazz : parameterTypes) {
-                getBean((Class<T>) clazz, path);
-            }
-
-            List<Object> listInstance = new ArrayList<>();
-            Arrays.stream(parameterTypes).forEach(clazz -> listInstance.add(mapInstance.get(clazz.getSimpleName())));
-
-            Object instance = constructorBean.newInstance(listInstance.toArray());
-            mapInstance.put(type.getSimpleName(), instance);
-            path.remove(path.size()-1);
+            path.remove(path.size() - 1);
             return (T) instance;
         }
-        return null;
+
+        Class<?>[] parameterTypes = constructorBean.getParameterTypes();
+        for (Class<?> clazz : parameterTypes) {
+            getBean((Class<T>) clazz, path);
+        }
+
+        List<Object> listInstance = new ArrayList<>();
+        Arrays.stream(parameterTypes).forEach(clazz -> listInstance.add(mapInstance.get(clazz.getSimpleName())));
+
+        Object instance = constructorBean.newInstance(listInstance.toArray());
+        mapInstance.put(type.getSimpleName(), instance);
+        path.remove(path.size() - 1);
+        return (T) instance;
     }
 
     private Constructor<?> getConstructor(Constructor<?>[] constructorsBean) {
@@ -101,10 +109,10 @@ public class InjectorImpl implements Injector {
         return constructorBean;
     }
 
-    private <T> BindWrapper getBindWrapper(Class<T> type) {
+    private <T> BindWrapper<?> getBindWrapper(Class<T> type) {
 
         if (!type.isInterface()) {
-            return new BindWrapper(false, type, null);
+            return new BindWrapper<>(false, type, null);
         }
         if (!mapBinds.containsKey(type.getSimpleName())) {
             throw new BindingNotFoundException("There is no implementation for this interface - " + type.getSimpleName());
@@ -113,14 +121,14 @@ public class InjectorImpl implements Injector {
     }
 
     @Override
-    public synchronized  <T> void bind(Class<T> intf, Class<? extends T> impl) {
-        BindWrapper bindWrapper = new BindWrapper(false, impl, intf);
+    public synchronized <T> void bind(Class<T> intf, Class<? extends T> impl) {
+        BindWrapper<T> bindWrapper = new BindWrapper<>(false, impl, intf);
         mapBinds.put(intf.getSimpleName(), bindWrapper);
     }
 
     @Override
-    public synchronized  <T> void bindSingleton(Class<T> intf, Class<? extends T> impl) {
-        BindWrapper bindWrapper = new BindWrapper(true, impl, intf);
+    public synchronized <T> void bindSingleton(Class<T> intf, Class<? extends T> impl) {
+        BindWrapper<T> bindWrapper = new BindWrapper<>(true, impl, intf);
         mapBinds.put(intf.getSimpleName(), bindWrapper);
     }
 }
